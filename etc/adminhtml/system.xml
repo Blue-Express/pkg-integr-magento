@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="carriers" translate="label" type="text" showInDefault="1" showInWebsite="1" showInStore="1">
+            <group id="bluexpress" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Configuración del Servicio Blue Express</label>
+		        <field id="bxapiKey" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Key Blue Express</label>
+                    <validate>required-entry</validate>
+                </field>
+                <field id="bxurlgeo" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Url APi Geolocation Blue Express</label>
+                    <validate>required-entry</validate>
+                </field>
+                <field id="bxurlprice" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Url APi Pricing Blue Express</label>
+                    <validate>required-entry</validate>
+                </field> 
+		        <field id="webhook" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Url WebHook</label>
+                    <validate>required-entry</validate>
+                </field>
+            </group>
+            <group id="bxexpress" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Envios Express</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>    
+            </group>
+            <group id="bxprioritario" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+               <label>Envios Prioritario</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>    
+            </group>
+	        <group id="bxsameday" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+               <label>Envios Same Day</label>
+                <field id="active" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>   
+            </group>
+        </section> 
+    </system>
+</config>

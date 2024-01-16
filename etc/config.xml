@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <carriers>
+            <bluexpress>
+                <bxapiKey></bxapiKey>
+                <bxurlgeo></bxurlgeo>
+                <bxurlprice></bxurlprice>
+                <webhook></webhook>
+            </bluexpress> 
+            <bxprioritario>
+                <active>0</active>
+                <title>Blue Express - PY </title>
+                <name>Blue Express - PY </name> 
+                <model>BlueExpress\Shipping\Model\Carrier\ShippingPt</model>
+            </bxprioritario> 
+            <bxexpress>
+                <active>0</active> 
+                <title>Blue Express - EX </title>
+                <name>Blue Express - EX </name> 
+                <model>BlueExpress\Shipping\Model\Carrier\ShippingEx</model>
+            </bxexpress> 
+	        <bxsameday>
+                <active>0</active> 
+                <title>Blue Express - MD </title>
+                <name>Blue Express - MD</name> 
+                <model>BlueExpress\Shipping\Model\Carrier\ShippingMd</model>
+            </bxsameday> 
+        </carriers> 
+    </default>
+</config>

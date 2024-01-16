@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">  
+    <menu>
+       <add id="BlueExpress_Shipping::menuPrincipal" 
+            title="Blue Express" 
+            module="BlueExpress_Shipping" 
+            sortOrder="20" 
+            resource="Magento_Backend::content" />
+       <add id="BlueExpress_Shipping::Settings" 
+            title="Métodos de envío" 
+            module="BlueExpress_Shipping" 
+            sortOrder="1" 
+            action="adminhtml/system_config/edit/section/carriers/webservice" 
+            parent="BlueExpress_Shipping::menuPrincipal" 
+            resource="BlueExpress_Shipping::carriers" />
+  </menu>
+</config>
