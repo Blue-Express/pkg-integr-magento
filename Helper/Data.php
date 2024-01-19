@@ -38,6 +38,19 @@ class Data extends AbstractHelper
     }
 
     /**
+     * Function de key de la Api precio
+     *
+     * @return string
+     */
+    public function getBxapiKey()
+    {
+        return $this->_scopeConfig->getValue(
+            'carriers/bluexpress/bxapiKey',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+    }
+
+    /**
      * Function para obtener peso del producto
      *
      * @return string

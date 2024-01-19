@@ -40,7 +40,7 @@ class Blueservice
      */
     protected $client;
 
-       /**
+    /**
      *
      * @var string
      */
@@ -51,6 +51,24 @@ class Blueservice
      * @var string
      */
     private $webhookEndpoint;
+
+    /**
+     *
+     * @var string
+     */
+    protected $urlBx;
+
+    /**
+     *
+     * @var string
+     */
+    private $geoEndpoint;
+
+    /**
+     *
+     * @var string
+     */
+    private $pricingEndpoint;
 
 
     /**
@@ -65,7 +83,8 @@ class Blueservice
     ) {
         $this->client               = new Client();
         $this->logger               = $logger;
-        $this->_urlBx               = $helperBX->getUrlBx();
+        $this->_bxapiKey            = $helperBX->getBxapiKey();
+        $this->urlBx                = $helperBX->getUrlBx();
         $this->geoEndpoint          = "/api/ecommerce/comunas/v1/bxgeo/v2";
         $this->pricingEndpoint      = "/api/ecommerce/pricing/v1";
         $this->integratorEndpoint   = "/api/integrations/magento/v1";
@@ -83,7 +102,7 @@ class Blueservice
             "Content-Type" => "application/json",
             "apikey" => "{$this->_bxapiKey}"
         ];
-        $response = $this->client->post("{$this->_urlBx}{$this->integratorEndpoint}", [
+        $response = $this->client->post("{$this->urlBx}{$this->integratorEndpoint}", [
             'headers' => $headers,
             'body' => json_encode($datosParams)
         ]);
@@ -98,7 +117,7 @@ class Blueservice
             "Content-Type" => "application/json",
             "apikey" => "{$this->_bxapiKey}"
         ];
-        $response = $this->client->post("{$this->_urlBx}{$this->webhookEndpoint}", [
+        $response = $this->client->post("{$this->urlBx}{$this->webhookEndpoint}", [
             'headers' => $headers,
             'body' => json_encode($datosParams)
         ]);
@@ -114,14 +133,13 @@ class Blueservice
      */
     public function getBXCosto($shippingParams)
     {
-      $shippingParams['domain'] = 'https://magento.dev.blue.cl/'; //eliminar
         $this->logger->info('Information sent to api price', $shippingParams);
         $headers = [
             "Content-Type" => "application/json",
             "Accept" => "application/json",
             "apikey" => "{$this->_bxapiKey}"
         ];
-        $response = $this->client->post("{$this->_urlBx}{$this->pricingEndpoint}", [
+        $response = $this->client->post("{$this->urlBx}{$this->pricingEndpoint}", [
             'headers' => $headers,
             'body' => json_encode($shippingParams)
         ]);
@@ -143,7 +161,7 @@ class Blueservice
             "Content-Type" => "application/json",
             "Accept" => "application/json"
         ];
-        $response = $this->client->post("{$this->_urlBx}{$this->geoEndpoint}", [
+        $response = $this->client->post("{$this->urlBx}{$this->geoEndpoint}", [
             'headers' => $headers,
             'body' => json_encode($shippingCity)
         ]);
