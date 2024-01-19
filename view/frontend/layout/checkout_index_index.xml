@@ -13,6 +13,16 @@
                                             <item name="children" xsi:type="array">
                                                 <item name="shippingAddress" xsi:type="array">
                                                     <item name="children" xsi:type="array">
+							<item name="before-form" xsi:type="array">
+                                                            <item name="children" xsi:type="array">
+                                                                <item name="pudo-enabled" xsi:type="array">
+                                                                    <item name="component" xsi:type="string">BlueExpress_Shipping/js/view/shipping-comment</item>
+                                                                    <item name="config" xsi:type="array">
+                                                                        <item name="pudo_enabled" xsi:type="boolean">true</item>
+                                                                    </item>
+                                                                </item>
+                                                            </item>
+                                                        </item>
                                                         <item name="shipping-rates-validation" xsi:type="array">
                                                             <item name="children" xsi:type="array">
                                                                 <item name="bxexpress-rates-validation" xsi:type="array">

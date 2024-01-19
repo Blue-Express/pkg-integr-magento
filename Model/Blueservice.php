@@ -9,30 +9,12 @@ use Psr\Log\LoggerInterface as LoggerInterface;
 
 class Blueservice
 {
-    /**
-     *
-     * @var string
-     */
-    protected $_apiUrlGeo;
-
-    /**
-     *
-     * @var string
-     */
-    protected $_apiUrlPrice;
-
+    
     /**
      *
      * @var string
      */
     protected $_bxapiKey;
-
-    /**
-     *
-     *
-     * @var string
-     */
-    protected $_urlWebhook;
 
     /**
      *
@@ -58,6 +40,19 @@ class Blueservice
      */
     protected $client;
 
+       /**
+     *
+     * @var string
+     */
+    private $integratorEndpoint;
+
+       /**
+     *
+     * @var string
+     */
+    private $webhookEndpoint;
+
+
     /**
      * Webservice constructor.
      * @param CheckoutSession $checkoutSession
@@ -67,13 +62,14 @@ class Blueservice
     public function __construct(
         HelperBX $helperBX,
         LoggerInterface $logger
-    ) { 
-        $this->client           = new Client();
-        $this->logger           = $logger;
-        $this->_bxapiKey        = $helperBX->getBxapiKey();
-        $this->_apiUrlGeo       = $helperBX->getBxapiGeo();
-        $this->_apiUrlPrice     = $helperBX->getBxapiPrice();
-        $this->_urlWebhook      = $helperBX->getWebHook();
+    ) {
+        $this->client               = new Client();
+        $this->logger               = $logger;
+        $this->_urlBx               = $helperBX->getUrlBx();
+        $this->geoEndpoint          = "/api/ecommerce/comunas/v1/bxgeo/v2";
+        $this->pricingEndpoint      = "/api/ecommerce/pricing/v1";
+        $this->integratorEndpoint   = "/api/integrations/magento/v1";
+        $this->webhookEndpoint      = "/api/integr/magento-wh/v1";
     }
 
     /**
@@ -87,7 +83,22 @@ class Blueservice
             "Content-Type" => "application/json",
             "apikey" => "{$this->_bxapiKey}"
         ];
-        $response = $this->client->post("{$this->_urlWebhook}", [
+        $response = $this->client->post("{$this->_urlBx}{$this->integratorEndpoint}", [
+            'headers' => $headers,
+            'body' => json_encode($datosParams)
+        ]);
+        $result = $response->getBody()->getContents();
+
+        return $result;
+    }
+
+    public function getBXNewOrder($datosParams)
+    {
+        $headers = [
+            "Content-Type" => "application/json",
+            "apikey" => "{$this->_bxapiKey}"
+        ];
+        $response = $this->client->post("{$this->_urlBx}{$this->webhookEndpoint}", [
             'headers' => $headers,
             'body' => json_encode($datosParams)
         ]);
@@ -103,13 +114,14 @@ class Blueservice
      */
     public function getBXCosto($shippingParams)
     {
+      $shippingParams['domain'] = 'https://magento.dev.blue.cl/'; //eliminar
         $this->logger->info('Information sent to api price', $shippingParams);
         $headers = [
             "Content-Type" => "application/json",
             "Accept" => "application/json",
             "apikey" => "{$this->_bxapiKey}"
         ];
-        $response = $this->client->post("{$this->_apiUrlPrice}", [
+        $response = $this->client->post("{$this->_urlBx}{$this->pricingEndpoint}", [
             'headers' => $headers,
             'body' => json_encode($shippingParams)
         ]);
@@ -131,7 +143,7 @@ class Blueservice
             "Content-Type" => "application/json",
             "Accept" => "application/json"
         ];
-        $response = $this->client->post("{$this->_apiUrlGeo}", [
+        $response = $this->client->post("{$this->_urlBx}{$this->geoEndpoint}", [
             'headers' => $headers,
             'body' => json_encode($shippingCity)
         ]);

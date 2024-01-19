@@ -3,10 +3,7 @@
     <default>
         <carriers>
             <bluexpress>
-                <bxapiKey></bxapiKey>
-                <bxurlgeo></bxurlgeo>
-                <bxurlprice></bxurlprice>
-                <webhook></webhook>
+                <urlBx></urlBx>
             </bluexpress> 
             <bxprioritario>
                 <active>0</active>
@@ -20,12 +17,15 @@
                 <name>Blue Express - EX </name> 
                 <model>BlueExpress\Shipping\Model\Carrier\ShippingEx</model>
             </bxexpress> 
-	        <bxsameday>
+	     <bxsameday>
                 <active>0</active> 
                 <title>Blue Express - MD </title>
                 <name>Blue Express - MD</name> 
                 <model>BlueExpress\Shipping\Model\Carrier\ShippingMd</model>
-            </bxsameday> 
+            </bxsameday>
+	    <pudo>
+		<bxKeyGoogle></bxKeyGoogle>
+	   </pudo>
         </carriers> 
     </default>
 </config>
