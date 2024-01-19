@@ -9,30 +9,12 @@ use Psr\Log\LoggerInterface as LoggerInterface;
 
 class Blueservice
 {
-    /**
-     *
-     * @var string
-     */
-    protected $_apiUrlGeo;
-
-    /**
-     *
-     * @var string
-     */
-    protected $_apiUrlPrice;
-
+    
     /**
      *
      * @var string
      */
     protected $_bxapiKey;
-
-    /**
-     *
-     *
-     * @var string
-     */
-    protected $_urlWebhook;
 
     /**
      *
