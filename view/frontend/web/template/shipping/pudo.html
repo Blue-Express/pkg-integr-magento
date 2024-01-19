@@ -1,0 +1,15 @@
+<div class="field choice" data-bind="visible: isPudoEnabled">
+    <input type="radio" name="custom_shipping_option" class="radio" id="custom_shipping_option_1" value="bx_delivery" data-bind="checked: customShippingOption" />
+    <label data-bind="attr: {for: 'custom_shipping_option_1'}" class="label">
+        <span><!-- ko i18n: 'Envío a domicilio'--><!-- /ko --></span>
+    </label>
+</div>
+<div class="field choice" data-bind="visible: isPudoEnabled">
+    <input type="radio" name="custom_shipping_option" class="radio" id="custom_shipping_option_2" value="bx_pudo" data-bind="checked: customShippingOption" />
+    <label data-bind="attr: {for: 'custom_shipping_option_2'}" class="label">
+        <span><!-- ko i18n: 'Retiro en Punto Blue - Copec'--><!-- /ko --></span>
+    </label>
+</div>
+<div id="bx-modal-pudo" style="display: none;">
+<iframe data-bind="attr: { src: iframeUrl }" frameborder="0" style="width:100%; height: 100vh;"></iframe>
+</div>

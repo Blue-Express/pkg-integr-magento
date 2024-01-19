@@ -6,7 +6,7 @@ Para concretar la instalacion del mdulo es necesario realizar los siguientes pas
 
  Ejecute los siguientes comandos de magento:
 ```
-	composer require blue/express:dev-master
+	composer require blue/express:dev-main
 	
 	php bin/magento setup:upgrade
         php bin/magento setup:di:compile

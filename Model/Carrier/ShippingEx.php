@@ -114,12 +114,12 @@ class ShippingEx extends AbstractCarrier implements CarrierInterface
      */
     public function collectRates(RateRequest $request)
     {
+
         if (!$this->getConfigFlag('active')) {
             return false;
         }
 
         $errorTitle = __('There are no quotes for the commune entered');
-        $blueservice = $this->_blueservice;
 
         /** @var \Magento\Shipping\Model\Rate\Result $result */
         $result = $this->rateResultFactory->create();
@@ -128,16 +128,21 @@ class ShippingEx extends AbstractCarrier implements CarrierInterface
         $method = $this->rateMethodFactory->create();
 
         $method->setCarrier($this->_code);
-        $method->setCarrierTitle($this->getConfigData('title'));
-
         $method->setMethod($this->_code);
-        $method->setMethodTitle($this->getConfigData('name'));
 
         /**
          * We get the ID of the country selected in the store
          */
         $countryID	= $this->getCountryByWebsite();
-	    $agencyId	= null;
+        $pudo		= false;
+        $arrayAgency	= explode(' - ',$request->getDestStreet());
+        if(!empty($arrayAgency) && array_key_exists(1, $arrayAgency)){
+            $agencyId   = $arrayAgency[1];
+            $this->_logger->info(print_r($arrayAgency, true));
+        }else {
+            $agencyId       = null;
+        }
+
         $citydest   = '';
 
         /**
@@ -157,53 +162,16 @@ class ShippingEx extends AbstractCarrier implements CarrierInterface
         $cityOrigin     = $this->getCodeGeoBx($storeCity,$originRegion,$baseUrl,$agencyId);
 
         if($countryID != 'CL' || empty($cityOrigin)){
-            return false;
+            $this->_logger->error('Error: Invalid country or empty city origin.');
+            $result->setError(__('There was an error calculating the shipping rate. Please contact support.'));
+            return $result;
         }
+
 
         /**
          * I get the product data
          */
-        $itemProduct = [];
-
-        foreach ($request->getAllItems() as $_item) {
-            if ($_item->getProductType() == 'configurable')
-                continue;
-
-                $_product = $_item->getProduct();
-
-            if ($_item->getParentItem())
-                $_item = $_item->getParentItem();
-
-                $blueAlto = (int) $_product->getResource()
-                    ->getAttributeRawValue($_product->getId(), 'height', $_product->getStoreId());
-
-                if($blueAlto == '' || $blueAlto == 0){
-                    $blueAlto = 10;
-                }
-
-                $blueLargo = (int) $_product->getResource()
-                    ->getAttributeRawValue($_product->getId(), 'large', $_product->getStoreId());
-
-                if($blueLargo == '' || $blueLargo == 0){
-                        $blueLargo = 10;
-                }
-
-                $blueAncho = (int) $_product->getResource()
-                    ->getAttributeRawValue($_product->getId(), 'width', $_product->getStoreId());
-
-                if($blueAncho == '' || $blueAncho == 0){
-                        $blueAncho = 10;
-                }
-
-
-                $itemProduct[] = [
-                    'largo'         => $blueAlto,
-                    'ancho'         => $blueAncho,
-                    'alto'          => $blueLargo,
-                    'pesoFisico'    => (int)$_product->getWeight(),
-                    'cantidad'      => $_item->getQty()
-                ];
-        }
+        $itemProduct = $this->getProductBx($request->getAllItems());
 
         /**
          * I look for the ID corresponding to the commune selected at checkout
@@ -211,56 +179,37 @@ class ShippingEx extends AbstractCarrier implements CarrierInterface
         $addressCity	= $request->getDestCity();
         $destRegionId   = $bdRegion->load($request->getDestRegionId())->getCode();
         if($addressCity !=''){
-            $citydest       = $this->getCodeGeoBx($addressCity,$destRegionId,$baseUrl,$agencyId);
+		    $citydest	= $this->getCodeGeoBx($addressCity,$destRegionId,$baseUrl,$agencyId);
+		    $pudo		= $citydest['pickup'];
         }
 
         if($citydest !=''){
             /**
             * I GENERATE THE ARRAY TO PASS IT TO THE API THAT WILL LOOK FOR THE PRICE
             */
-            $seteoDatos = [
-                "from" => [ "country" => "{$countryID}", "district" => "{$cityOrigin['districtCode']}" ],
-                "to" => [ "country" => "{$countryID}", "state" => "{$citydest['regionCode']}", "district" => "{$citydest['districtCode']}" ],
-                "serviceType" => "EX",
-                "domain" => "{$baseUrl}",
-                "datosProducto" => [
-                    "producto" => "P",
-                    "familiaProducto" => "PAQU",
-                    "bultos" =>$itemProduct
-                ]
-            ];
 
-            $costoEnvio = $blueservice->getBXCosto($seteoDatos);
+            if($pudo === true){
+                $familiaProducto = 'PUDO';
+                $rate = $this->getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct,$familiaProducto);
 
-            /*
-            * We format the data of the JSON String
-            */
-            $json = json_decode($costoEnvio,true);
-            $costo = 0;
-            foreach ($json as $key => $datos){
-                if($key == 'data'){
-                    if(is_array($datos) && array_key_exists('total',$datos) ){
-                        if($datos['total'] != '' && $datos['total'] != 0){
-                            $method->setPrice((int)$datos['total']);
-                            $method->setCost((int)$datos['total']);
-                        }else{
-                            $costo = -1;
-                        }
-                    }else{
-                        $costo = -1;
-                    }
-                }
+            }else{
+                $familiaProducto = 'PAQU';
+                $rate = $this->getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct,$familiaProducto);
             }
 
-            $result->append($method);
+            $result->append($rate['method']);
 
-            if($costo != -1){
+            if($rate['costo'] != -1){
                 return $result;
             }else{
-                return false;
+                $this->_logger->error('Error: There was an error calculating the shipping rate.');
+                $result->setError(__('There was an error calculating the shipping rate. Please contact support.'));
+                return $result;
             }
         }else{
-            return false;
+            $this->_logger->error('Error: Invalid country or empty destination city.');
+            $result->setError(__('There was an error calculating the shipping rate. Please contact support.'));
+            return $result;
         }
     }
 
@@ -305,6 +254,54 @@ class ShippingEx extends AbstractCarrier implements CarrierInterface
         return $origValue;
     }
 
+    public function getProductBx($productBx)
+    {
+        $itemProduct = [];
+
+        foreach ($productBx as $_item) {
+            if ($_item->getProductType() == 'configurable')
+                continue;
+
+                $_product = $_item->getProduct();
+
+            if ($_item->getParentItem())
+                $_item = $_item->getParentItem();
+
+                $blueAlto = (int) $_product->getResource()
+                    ->getAttributeRawValue($_product->getId(), 'height', $_product->getStoreId());
+
+                if($blueAlto == '' || $blueAlto == 0){
+                    $blueAlto = 10;
+                }
+
+                $blueLargo = (int) $_product->getResource()
+                    ->getAttributeRawValue($_product->getId(), 'large', $_product->getStoreId());
+
+                if($blueLargo == '' || $blueLargo == 0){
+                        $blueLargo = 10;
+                }
+
+                $blueAncho = (int) $_product->getResource()
+                    ->getAttributeRawValue($_product->getId(), 'width', $_product->getStoreId());
+
+                if($blueAncho == '' || $blueAncho == 0){
+                        $blueAncho = 10;
+                }
+
+
+                $itemProduct[] = [
+                    'largo'         => $blueAlto,
+                    'ancho'         => $blueAncho,
+                    'alto'          => $blueLargo,
+                    'pesoFisico'    => (int)$_product->getWeight(),
+                    'cantidad'      => $_item->getQty()
+                ];
+        }
+
+        return $itemProduct;
+    }
+
+
      /**
      * Funcion obtener la comuna
      * @param string $city
@@ -324,9 +321,58 @@ class ShippingEx extends AbstractCarrier implements CarrierInterface
             "regionCode" => $region,
             "agencyId" => $agencyId
         ];
-        
+
         $cityOrigin= $this->_blueservice->getGeolocation($Comuna);
 
         return $cityOrigin;
+    }
+
+    public function getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct, $familiaProducto)
+    {
+
+        $seteoDatos = [
+            "from" => [ "country" => "{$countryID}", "district" => "{$cityOrigin['districtCode']}" ],
+            "to" => [ "country" => "{$countryID}", "state" => "{$citydest['regionCode']}", "district" => "{$citydest['districtCode']}" ],
+            "serviceType" => "EX",
+            "domain" => "{$baseUrl}",
+            "datosProducto" => [
+                "producto" => "P",
+                "familiaProducto" => "{$familiaProducto}",
+                "bultos" =>$itemProduct
+            ]
+        ];
+
+	    $blueservice = $this->_blueservice;
+        $costoEnvio = $blueservice->getBXCosto($seteoDatos);
+        $json = json_decode($costoEnvio,true);
+        $costo = 0;
+        foreach ($json as $key => $datos){
+            if($key == 'data'){
+                if(is_array($datos) && !empty($datos)){
+                    if($datos['total'] != '' && $datos['total'] != 0){
+                        $method->setPrice((int)$datos['total']);
+                        $method->setCost((int)$datos['total']);
+                        if($familiaProducto === 'PUDO'){
+                            $method->setMethodTitle($citydest['pickupInfo']['agency_name']);
+                            $method->setCarrierTitle($citydest['pickupInfo']['agency_name']);
+                        }else{
+                            $method->setMethodTitle($datos['nameService']);
+                            $method->setCarrierTitle($datos['promiseDay']);
+                        }
+                    }else{
+                        $costo = -1;
+                    }
+                }else{
+                    $costo = -1;
+                }
+            }
+        }
+
+        $response = [
+            'method' =>$method,
+            'costo' => $costo
+        ];
+
+        return $response;
     }
 }

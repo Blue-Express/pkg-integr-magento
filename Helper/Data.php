@@ -9,8 +9,6 @@ class Data extends AbstractHelper
 {
 
     /**
-     *
-     *
      * @var ScopeConfigInterface
      */
     protected $_scopeConfig;
@@ -27,53 +25,14 @@ class Data extends AbstractHelper
     }
 
     /**
-     * Function de key de la Api precio
+     * Function para conexion Url Servicio Blue
      *
      * @return string
      */
-    public function getBxapiKey()
+    public function getUrlBx()
     {
         return $this->_scopeConfig->getValue(
-            'carriers/bluexpress/bxapiKey',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        );
-    }
-
-     /**
-      * Function de url de la Api geo
-      *
-      * @return string
-      */
-    public function getBxapiGeo()
-    {
-        return $this->_scopeConfig->getValue(
-            'carriers/bluexpress/bxurlgeo',
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        );
-    }
-
-    /**
-     * Function de url de la Api precio
-     *
-     * @return string
-     */
-    public function getBxapiPrice()
-    {
-        return $this->_scopeConfig->getValue(
-            'carriers/bluexpress/bxurlprice', 
-            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
-        );
-    }
-
-    /**
-     * Function para conexion webhook
-     *
-     * @return string
-     */
-    public function getWebHook()
-    {
-        return $this->_scopeConfig->getValue(
-            'carriers/bluexpress/webhook', 
+            'carriers/bluexpress/urlBx',
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
     }
@@ -90,4 +49,21 @@ class Data extends AbstractHelper
             \Magento\Store\Model\ScopeInterface::SCOPE_STORE
         );
     }
+
+    public function getIsPudo()
+    {
+        return $this->_scopeConfig->isSetFlag(
+            'carriers/pudo/enabled',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+    }
+
+    public function getKeyGoogle()
+    {
+        return $this->_scopeConfig->getValue(
+            'carriers/pudo/bxKeyGoogle',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+    }
+
 }

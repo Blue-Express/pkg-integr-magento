@@ -8,16 +8,8 @@
                     <label>Key Blue Express</label>
                     <validate>required-entry</validate>
                 </field>
-                <field id="bxurlgeo" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Url APi Geolocation Blue Express</label>
-                    <validate>required-entry</validate>
-                </field>
-                <field id="bxurlprice" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Url APi Pricing Blue Express</label>
-                    <validate>required-entry</validate>
-                </field> 
-		        <field id="webhook" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
-                    <label>Url WebHook</label>
+                <field id="urlBx" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Url del Servicio</label>
                     <validate>required-entry</validate>
                 </field>
             </group>
@@ -42,6 +34,17 @@
                     <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
                 </field>   
             </group>
-        </section> 
+	        <group id="pudo" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Configuración Pudo Blue Express</label>
+                <field id="enabled" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Pudo</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="bxKeyGoogle" translate="label" type="text" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Key Google</label>
+                    <validate>required-entry</validate>
+                </field>
+            </group>
+        </section>
     </system>
 </config>
