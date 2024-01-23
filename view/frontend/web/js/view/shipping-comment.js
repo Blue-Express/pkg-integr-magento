@@ -21,7 +21,7 @@ define([
             self.customShippingOption = ko.observable('bx_delivery');
 	    self.isPudoEnabled = ko.observable(window.checkoutConfig.bxpudo.pudo_enabled);
 	    self.bxKeyGoogle = ko.observable(window.checkoutConfig.bxpudo.key_google);
-	    self.iframeUrl = ko.observable('https://widget-pudo.qa.blue.cl/?key=' + encodeURIComponent(self.bxKeyGoogle()));
+	    self.iframeUrl = ko.observable('https://widget-pudo.blue.cl/?key=' + encodeURIComponent(self.bxKeyGoogle()));
 
             self.customShippingOption.subscribe(function (newValue) {
                 if (newValue === 'bx_pudo') {
