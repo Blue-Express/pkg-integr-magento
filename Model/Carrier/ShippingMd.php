@@ -267,27 +267,9 @@ class ShippingMd extends AbstractCarrier implements CarrierInterface
             if ($_item->getParentItem())
                 $_item = $_item->getParentItem();
 
-                $blueAlto = (int) $_product->getResource()
-                    ->getAttributeRawValue($_product->getId(), 'height', $_product->getStoreId());
-
-                if($blueAlto == '' || $blueAlto == 0){
-                    $blueAlto = 10;
-                }
-
-                $blueLargo = (int) $_product->getResource()
-                    ->getAttributeRawValue($_product->getId(), 'large', $_product->getStoreId());
-
-                if($blueLargo == '' || $blueLargo == 0){
-                        $blueLargo = 10;
-                }
-
-                $blueAncho = (int) $_product->getResource()
-                    ->getAttributeRawValue($_product->getId(), 'width', $_product->getStoreId());
-
-                if($blueAncho == '' || $blueAncho == 0){
-                        $blueAncho = 10;
-                }
-
+                $blueAlto   = $this->getValidDimension($_product, 'height');
+                $blueLargo  = $this->getValidDimension($_product, 'large');
+                $blueAncho  = $this->getValidDimension($_product, 'width');
 
                 $itemProduct[] = [
                     'largo'         => $blueAlto,
@@ -299,6 +281,27 @@ class ShippingMd extends AbstractCarrier implements CarrierInterface
         }
 
         return $itemProduct;
+    }
+
+     /**
+     * Obtiene y valida una dimensión del producto.
+     *
+     * @param object $_product El producto del cual obtener la dimensión.
+     * @param string $attribute El atributo de la dimensión ('height', 'large', 'width').
+     * @return int La dimensión validada.
+     */
+    private function getValidDimension($_product, $attribute)
+    {
+        $dimension = $_product->getResource()
+            ->getAttributeRawValue($_product->getId(), $attribute, $_product->getStoreId());
+
+        $dimension = floatval(str_replace(',', '.', $dimension));
+        
+        if (empty($dimension) || $dimension == 0) {
+            $dimension = 10;
+        }
+
+        return $dimension;
     }
 
     /**

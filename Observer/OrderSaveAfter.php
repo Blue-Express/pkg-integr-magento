@@ -8,377 +8,178 @@ use Psr\Log\LoggerInterface;
 use Magento\Sales\Model\Order;
 use BlueExpress\Shipping\Model\Blueservice;
 use BlueExpress\Shipping\Helper\Data as HelperBX;
+use Magento\Store\Model\StoreManagerInterface;
+use Magento\Framework\App\ObjectManager;
+use Magento\Catalog\Model\ResourceModel\Product as ProductResource;
+
 
 class OrderSaveAfter implements ObserverInterface
 {
-  /**
-   *
-   *
-   * @var Blueservice
-   */
-  protected $_blueservice;
+    protected $_blueservice;
+    protected $weightStore;
+    protected $logger;
+    protected $storeManager;
+    protected $newOrdersBlue;
 
-  /**
-   *
-   *
-   * @var string
-   */
-  protected $_weigthStore;
-
-  /**
-   *
-   *
-   * @var LoggerInterface
-   */
-  protected $logger;
-
-  /**
-   *
-   *
-   * @var \Magento\Store\Model\StoreManagerInterface
-   */
-  protected $_storeManager;
-
-  /**
-   *
-   * @param  \Magento\Store\Model\StoreManagerInterface $storeManager
-   * @param Blueservice $blueservice
-   * @param HelperBX $helperBX
-   * @param LoggerInterface $logger
-   *
-   */
-
-  protected $newOrdersBlue;
-  public function __construct(
-    \Magento\Store\Model\StoreManagerInterface $storeManager,
-    Blueservice $blueservice,
-    HelperBX $helperBX,
-    LoggerInterface $logger
-  ) {
-    $this->_storeManager = $storeManager;
-    $this->_blueservice = $blueservice;
-    $this->_weigthStore = $helperBX->getWeightUnit();
-    $this->logger = $logger;
-    $this->newOrdersBlue = true;
-  }
-
-  public function execute(Observer $observer)
-  {
-    if ($this->newOrdersBlue) {
-      $this->newBlueOrder($observer);
-      return;
+    public function __construct(
+        StoreManagerInterface $storeManager,
+        Blueservice $blueservice,
+        HelperBX $helperBX,
+        LoggerInterface $logger
+    ) {
+        $this->storeManager = $storeManager;
+        $this->_blueservice = $blueservice;
+        $this->weightStore = $helperBX->getWeightUnit();
+        $this->logger = $logger;
+        $this->newOrdersBlue = true;
+    }
+    
+    public function execute(Observer $observer)
+    {
+      if ($this->newOrdersBlue) {
+          $this->processOrder($observer, true);
+      } else {
+          $this->processOrder($observer, false);
+      }
     }
 
-    $this->oldBlueOrder($observer);
-  }
+    private function processOrder(Observer $observer, bool $isNewOrder){
 
-  private function oldBlueOrder(Observer $observer)
-  {
-    /**
-     * I send the connection data to Blue Express
-     */
-    $orderID = $observer->getEvent()->getOrder()->getId();
-    $incrementId = $observer->getEvent()->getOrder()->getIncrementId();
-    $status = $observer->getEvent()->getOrder()->getStatus();
-    $state = $observer->getEvent()->getOrder()->getState();
-    $weight_uni = $this->_weigthStore;
+        $order = $observer->getEvent()->getOrder();
+        $orderID = $order->getId();
+        $incrementId = $order->getIncrementId();
+        $status = $order->getStatus();
+        $state = $order->getState();
+        $weightUnit = $this->weightStore;
+        $baseUrl = $this->storeManager->getStore()->getBaseUrl();
 
-    /**
-     * I CONNECT TO THE SERVICE TO SEND THROUGH THE WEBHOOK
-     */
-    $blueservice = $this->_blueservice;
+        if ($state === 'processing' && in_array($order->getShippingMethod(), [
+          'bxexpress_bxexpress',
+          'bxprioritario_bxprioritario',
+          'bxPremium_bxPremium',
+          'bxsameday_bxsameday'
+      ])) {
 
-    /**
-     * OBTAINING THE DETAIL OF THE ORDER
-     */
-    $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-    $orders = $objectManager->create('Magento\Sales\Model\Order')->load($orderID);
-    $detailOrder = $orders->getData();
-    $shipping = $orders->getShippingAddress();
-    $billing = $orders->getBillingAddress();
-    $shippingAddress = [];
-    $billingAddress = [];
+        $shippingAddress = $this->getAddressDetails($order->getShippingAddress(),$baseUrl);
+        $billingAddress = $this->getAddressDetails($order->getBillingAddress(),$baseUrl);
 
-    /**
-     * GETTING THE STORE URL BASE
-     */
-    $storeManager = $this->_storeManager;
-    $baseUrl = $storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_WEB);
+        $productDetails = [];
+        $dimensions = [];
+        $productResource = ObjectManager::getInstance()->get(ProductResource::class);
 
-    if ($state == 'processing' && ($detailOrder['shipping_method'] == 'bxexpress_bxexpress' || $detailOrder['shipping_method'] == 'bxprioritario_bxprioritario' || $detailOrder['shipping_method'] == 'bxPremium_bxPremium' || $detailOrder['shipping_method'] == 'bxsameday_bxsameday')) {
+        foreach ($order->getAllVisibleItems() as $item) {
+            $productDetails[] = [
+                "qty" => $item->getQtyOrdered(),
+                "weight" => $item->getWeight(),
+                "sku" => $item->getSku(),
+                "name" => $item->getName(),
+                "price" => $item->getPrice(),
+                "discount_percent" => $item->getDiscountPercent(),
+                "discount_amount" => $item->getDiscountAmount(),
+                "row_weight" => $item->getRowWeight(),
+                "free_shipping" => $item->getFreeShipping()
+            ];
 
-      if (isset($shipping) && $shipping->getEntityId()) {
-
-        $regionCodeShipping = $shipping->getRegionCode();
-        $regionShipping = substr($regionCodeShipping, 3, 2);
-        $streetShipping = $shipping->getStreet();
-        $streetSh = explode(' - ', $streetShipping[0]);
-
-        if (!empty($streetSh) && array_key_exists(1, $streetSh)) {
-          $agencyId = $streetSh[1];
-        } else {
-          $agencyId = null;
+            $dimensions[] = $this->getProductDimensions($productResource, $item->getSku());
         }
 
+        $typeCarrier = $this->getTypeCarrier($order->getShippingMethod());
+
+        $orderPayload = [
+            "orderId" => $orderID,
+            "incrementId" => $incrementId,
+            "weight" => $weightUnit,
+            "detailOrder" => $order->getData(),
+            "shipping" => $shippingAddress,
+            "billing" => $billingAddress,
+            "product" => $productDetails,
+            "dimensions" => $dimensions,
+            "agencyId" => $shippingAddress['agency_id'] ?? null,
+            "origin" => ["account" => $baseUrl],
+            "type_carrier" => $typeCarrier
+        ];
+
+        $this->logger->info('Information sent to the webhook', ['Detail' => $orderPayload]);
+        
+        if ($isNewOrder) {
+            $this->_blueservice->getBXNewOrder($orderPayload);
+        } else {
+            $this->_blueservice->getBXOrder($orderPayload);
+        }
+
+      }
+
+    }
+
+    private function getAddressDetails($address, $baseUrl)
+    {
+        if (!$address || !$address->getEntityId()) {
+            return [];
+        }
+
+        $regionCodeShipping = $address->getRegionCode();
+        $regionShipping = substr($regionCodeShipping, 3, 2);
+
+        $street = explode(' - ', $address->getStreet()[0]);
+
         $comuna = [
-          "address" => $shipping->getCity(),
+          "address" => $address->getCity(),
           "type" => "shopify",
           "shop" => $baseUrl,
           "regionCode" => $regionShipping,
-          "agencyId" => $agencyId
+          "agencyId" => $street[1] ?? null
         ];
 
-        $destricCity = $blueservice->getGeolocation($comuna);
-        $ShipiDistrict = [];
-        $shipiRegion = [];
+        $geolocation = $this->_blueservice->getGeolocation($comuna);
+        $district = array_key_exists("districtCode", $geolocation) ? $geolocation['districtCode'] : null;
+        $region = array_key_exists("regionCode", $geolocation) ? $geolocation['regionCode'] : null;
 
-        if (array_key_exists("districtCode", $destricCity)) {
-          $ShipiDistrict = $destricCity['districtCode'];
-          $shipiRegion = $destricCity['regionCode'];
-        }
-
-        $billing = $orders->getBillingAddress();
-        $regionCodeBilling = $billing->getRegionCode();
-        $regionBilling = substr($regionCodeBilling, 3, 2);
-        $streetBilling = $billing->getStreet();
-        $streetBi = explode('-', $streetBilling[0]);
-
-        if (!empty($streetBi) && array_key_exists(1, $streetBi)) {
-          $agencyId = $streetBi[1];
-        } else {
-          $agencyId = null;
-        }
-
-        $comunaBilling = [
-          "address" => $billing->getCity(),
-          "type" => "shopify",
-          "shop" => $baseUrl,
-          "regionCode" => $regionBilling,
-          "agencyId" => $agencyId
+        return [
+            "region" => $address->getRegion(),
+            "postcode" => $address->getPostcode(),
+            "lastname" => $address->getLastname(),
+            "street" => $address->getStreet(),
+            "city" => $this->_blueservice->eliminarAcentos($address->getCity()),
+            "district" => $district ,
+            "state" =>  $region,
+            "email" => $address->getEmail(),
+            "telephone" => $address->getTelephone(),
+            "country_id" => $address->getCountryId(),
+            "firstname" => $address->getFirstname(),
+            "address_type" => $address->getAddressType(),
+            "company" => $address->getCompany(),
+            "agency_id" => $street[1] ?? null
         ];
-
-        $destricBillingCity = $blueservice->getGeolocation($comunaBilling);
-        $billiDistrict = [];
-        $billiRegion = [];
-
-        if (array_key_exists("districtCode", $destricCity)) {
-          $billiDistrict = $destricBillingCity['districtCode'];
-          $billiRegion = $destricBillingCity['regionCode'];
-        }
-
-        $shippingAddress = [
-          "entity_id" => $shipping->getEntityID(),
-          "parent_id" => $shipping->getParentId(),
-          "quote_address_id" => $shipping->getQuoteAddressId(),
-          "region_id" => $shipping->getRegionId(),
-          "region" => $shipping->getRegion(),
-          "postcode" => $shipping->getPostCode(),
-          "lastname" => $shipping->getLastname(),
-          "street" => $shipping->getStreet(),
-          "city" => $blueservice->eliminarAcentos($shipping->getCity()),
-          "district" => $ShipiDistrict,
-          "state" => $shipiRegion,
-          "email" => $shipping->getEmail(),
-          "telephone" => $shipping->getTelephone(),
-          "country_id" => $shipping->getCountryId(),
-          "firstname" => $shipping->getFirstname(),
-          "address_type" => $shipping->getAddressType(),
-          "company" => $shipping->getCompany()
-        ];
-
-        $billingAddress = [
-          "entity_id" => $billing->getEntityID(),
-          "parent_id" => $billing->getParentId(),
-          "quote_address_id" => $billing->getQuoteAddressId(),
-          "region_id" => $billing->getRegionId(),
-          "region" => $billing->getRegion(),
-          "postcode" => $billing->getPostCode(),
-          "lastname" => $billing->getLastname(),
-          "street" => $billing->getStreet(),
-          "city" => $blueservice->eliminarAcentos($billing->getCity()),
-          "district" => $billiDistrict,
-          "state" => $billiRegion,
-          "email" => $billing->getEmail(),
-          "telephone" => $billing->getTelephone(),
-          "country_id" => $billing->getCountryId(),
-          "firstname" => $billing->getFirstname(),
-          "address_type" => $billing->getAddressType(),
-          "company" => $billing->getCompany()
-        ];
-      }
-
-      $ProductDetail = array();
-      $dimensiones = array();
-      $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-      $resource = $objectManager->get(\Magento\Catalog\Model\ResourceModel\Product::class);
-
-      foreach ($orders->getAllVisibleItems() as $item) {
-
-        $ProductDetail[] = $item->getData();
-        $alto = $resource->getAttributeRawValue($resource->getIdBySku($item->getSku()), 'height', 0);
-        $ancho = $resource->getAttributeRawValue($resource->getIdBySku($item->getSku()), 'width', 0);
-        $largo = $resource->getAttributeRawValue($resource->getIdBySku($item->getSku()), 'large', 0);
-
-        if (empty($alto) || $alto == 0) {
-          $alto = 10;
-        }
-
-        if (empty($ancho) || $ancho == 0) {
-          $ancho = 10;
-        }
-
-        if (empty($largo) || $largo == 0) {
-          $largo = 10;
-        }
-
-        $dimensiones[] = [
-          "height" => $alto,
-          "width" => $ancho,
-          "large" => $largo
-        ];
-      }
-
-      $typeCarrier = '';
-
-      switch ($detailOrder['shipping_method']) {
-        case 'bxexpress_bxexpress':
-          $typeCarrier = "EX";
-          break;
-        case 'bxprioritario_bxprioritario':
-          $typeCarrier = "PY";
-          break;
-        case 'bxsameday_bxsameday':
-          $typeCarrier = "MD";
-          break;
-        default:
-          $typeCarrier = "";
-      }
-
-      $pedido = [
-        "OrderId" => $orderID,
-        "IncrementId" => $incrementId,
-        "tipoPeso" => $weight_uni,
-        "DetailOrder" => $detailOrder,
-        "Shipping" => $shippingAddress,
-        "Billing" => $billingAddress,
-        "type_carrier" => $typeCarrier,
-        "Product" => $ProductDetail,
-        "dimensions" => $dimensiones,
-        "agencyId" => $agencyId,
-        "Origin" => [
-          "Account" => $baseUrl
-        ]
-      ];
-
-      $this->logger->info('Information sent to the webhook', ['Detalle' => json_encode($pedido)]);
-      $respuestaWebhook = $blueservice->getBXOrder($pedido);
     }
-  }
 
-  private function newBlueOrder(Observer $observer)
-  {
-    /**
-     * I send the connection data to Blue Express
-     */
-    $orderID = $observer->getEvent()->getOrder()->getId();
-    $incrementId = $observer->getEvent()->getOrder()->getIncrementId();
-    $status = $observer->getEvent()->getOrder()->getStatus();
-    $state = $observer->getEvent()->getOrder()->getState();
-    $weight_uni = $this->_weigthStore;
+    private function getProductDimensions(ProductResource $resource, string $sku)
+    {
+        $height = $resource->getAttributeRawValue($resource->getIdBySku($sku), 'height', 0) ?: 10;
+        $width = $resource->getAttributeRawValue($resource->getIdBySku($sku), 'width', 0) ?: 10;
+        $length = $resource->getAttributeRawValue($resource->getIdBySku($sku), 'large', 0) ?: 10;
+        
+        $height = is_string($height) ? str_replace(',', '.', $height) : $height;
+        $width = is_string($width) ? str_replace(',', '.', $width) : $width;
+        $length = is_string($length) ? str_replace(',', '.', $length) : $length;
 
-    /**
-     * I CONNECT TO THE SERVICE TO SEND THROUGH THE WEBHOOK
-     */
-    $blueservice = $this->_blueservice;
-
-    /**
-     * OBTAINING THE DETAIL OF THE ORDER
-     */
-    $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-    $orders = $objectManager->create('Magento\Sales\Model\Order')->load($orderID);
-    $detailOrder = $orders->getData();
-    $shipping = $orders->getShippingAddress();
-    $shippingAddress = [];
-    $billingAddress = [];
-    $agencyId = null;
-
-    /**
-     * GETTING THE STORE URL BASE
-     */
-    $storeManager = $this->_storeManager;
-    $baseUrl = $storeManager->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_WEB);
-
-    if ($state == 'processing' && ($detailOrder['shipping_method'] == 'bxexpress_bxexpress' || $detailOrder['shipping_method'] == 'bxprioritario_bxprioritario' || $detailOrder['shipping_method'] == 'bxPremium_bxPremium' || $detailOrder['shipping_method'] == 'bxsameday_bxsameday')) {
-
-      if (isset($shipping) && $shipping->getEntityId()) {
-        $shippingAddress = $shipping->getData();
-        $shippingAddress['region_code'] = $shipping->getRegionCode();
-
-        $shippingStreetShipping = $shipping->getStreet();
-        $streetSh = explode(' - ', $shippingStreetShipping[0]);
-        $agencyId = !empty($streetSh) && array_key_exists(1, $streetSh) ? $streetSh[1] : null;
-
-        $this->logger->info('SHIPPING no mapped', $shippingAddress);
-
-        $billing = $orders->getBillingAddress();
-        $billingAddress = $billing->getData();
-        $billingAddress['region_code'] = $billing->getRegionCode();
-
-        if (!$agencyId) {
-          $streetBilling = $billing->getStreet();
-          $streetSh = explode(' - ', $streetBilling[0]);
-          $agencyId = !empty($streetSh) && array_key_exists(1, $streetSh) ? $streetSh[1] : null;
-        }
-      }
-
-      $ProductDetail = array();
-      $dimensiones = array();
-      $objectManager = \Magento\Framework\App\ObjectManager::getInstance();
-      $resource = $objectManager->get(\Magento\Catalog\Model\ResourceModel\Product::class);
-
-      foreach ($orders->getAllVisibleItems() as $item) {
-
-        $ProductDetail[] = $item->getData();
-        $alto = $resource->getAttributeRawValue($resource->getIdBySku($item->getSku()), 'height', 0);
-        $ancho = $resource->getAttributeRawValue($resource->getIdBySku($item->getSku()), 'width', 0);
-        $largo = $resource->getAttributeRawValue($resource->getIdBySku($item->getSku()), 'large', 0);
-
-        if (empty($alto) || $alto == 0) {
-          $alto = 10;
-        }
-
-        if (empty($ancho) || $ancho == 0) {
-          $ancho = 10;
-        }
-
-        if (empty($largo) || $largo == 0) {
-          $largo = 10;
-        }
-
-        $dimensiones[] = [
-          "height" => $alto,
-          "width" => $ancho,
-          "large" => $largo
+        return [
+            "height" => $height,
+            "width" => $width,
+            "large" => $length
         ];
-      }
-
-      $orderPayload = [
-        "orderId" => $orderID,
-        "incrementId" => $incrementId,
-        "weight" => $weight_uni,
-        "detailOrder" => $detailOrder,
-        "shipping" => $shippingAddress,
-        "billing" => $billingAddress,
-        "product" => $ProductDetail,
-        "dimensions" => $dimensiones,
-        "agencyId" => $agencyId,
-        "origin" => [
-          "account" => $baseUrl
-        ]
-      ];
-
-      $this->logger->info('Information sent to the webhook', ['Detalle' => $orderPayload]);
-      $respuestaWebhook = $blueservice->getBXNewOrder([$orderPayload]);
     }
-  }
+
+    private function getTypeCarrier(string $shippingMethod)
+    {
+        switch ($shippingMethod) {
+            case 'bxexpress_bxexpress':
+                return "EX";
+            case 'bxprioritario_bxprioritario':
+                return "PY";
+            case 'bxsameday_bxsameday':
+                return "MD";
+            default:
+                return "";
+        }
+    }
 }
