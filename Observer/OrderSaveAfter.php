@@ -102,9 +102,9 @@ class OrderSaveAfter implements ObserverInterface
         $this->logger->info('Information sent to the webhook', ['Detail' => $orderPayload]);
         
         if ($isNewOrder) {
-            $this->_blueservice->getBXNewOrder($orderPayload);
+            $this->_blueservice->getBXNewOrder([$orderPayload]);
         } else {
-            $this->_blueservice->getBXOrder($orderPayload);
+            $this->_blueservice->getBXOrder([$orderPayload]);
         }
 
       }
