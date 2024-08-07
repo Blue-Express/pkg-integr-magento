@@ -157,7 +157,7 @@ class ShippingMd extends AbstractCarrier implements CarrierInterface
         * I look for the ID corresponding to the commune selected in admin
         */
         $storeCity      = $this->scopeConfig->getValue('general/store_information/city',ScopeInterface::SCOPE_STORE);
-	$storeRegion    = $this->scopeConfig->getValue('general/store_information/region_id',ScopeInterface::SCOPE_STORE);
+	    $storeRegion    = $this->scopeConfig->getValue('general/store_information/region_id',ScopeInterface::SCOPE_STORE);
         $originRegion   = $bdRegion->load($storeRegion)->getCode();
         $cityOrigin     = $this->getCodeGeoBx($storeCity,$originRegion,$baseUrl,$agencyId);
 
