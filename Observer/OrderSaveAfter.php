@@ -69,7 +69,9 @@ class OrderSaveAfter implements ObserverInterface
 
         foreach ($order->getAllVisibleItems() as $item) {
             $productDetails[] = [
+                "item_id" =>$item->getItemId(),
                 "qty" => $item->getQtyOrdered(),
+		        "qty_invoiced" => $item->getQtyInvoiced(),
                 "weight" => $item->getWeight(),
                 "sku" => $item->getSku(),
                 "name" => $item->getName(),

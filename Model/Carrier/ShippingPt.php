@@ -270,12 +270,19 @@ class ShippingPt extends AbstractCarrier implements CarrierInterface
                 $blueAlto   = $this->getValidDimension($_product, 'height');
                 $blueLargo  = $this->getValidDimension($_product, 'large');
                 $blueAncho  = $this->getValidDimension($_product, 'width');
+                $pesoFisico = $_product->getWeight();
+
+                if (strpos($pesoFisico, '.') !== false) {
+                    $pesoFisico = (float)$pesoFisico;
+                } else {
+                    $pesoFisico = (int)$pesoFisico;
+                }
 
                 $itemProduct[] = [
                     'largo'         => $blueAlto,
                     'ancho'         => $blueAncho,
                     'alto'          => $blueLargo,
-                    'pesoFisico'    => (int)$_product->getWeight(),
+                    'pesoFisico'    => $pesoFisico,
                     'cantidad'      => $_item->getQty()
                 ];
         }
