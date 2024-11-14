@@ -137,6 +137,7 @@ class OrderSaveAfter implements ObserverInterface
         $region = array_key_exists("regionCode", $geolocation) ? $geolocation['regionCode'] : null;
 
         return [
+            "region_code" =>$regionCodeShipping,
             "region" => $address->getRegion(),
             "postcode" => $address->getPostcode(),
             "lastname" => $address->getLastname(),

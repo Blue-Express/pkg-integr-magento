@@ -131,13 +131,14 @@ class Blueservice
      * @param array $shippingParams
      * @return array
      */
-    public function getBXCosto($shippingParams)
+    public function getBXCosto($shippingParams,$subtotal)
     {
         $this->logger->info('Information sent to api price', $shippingParams);
         $headers = [
             "Content-Type" => "application/json",
             "Accept" => "application/json",
-            "apikey" => "{$this->_bxapiKey}"
+            "apikey" => "{$this->_bxapiKey}",
+            "price" => $subtotal
         ];
         $response = $this->client->post("{$this->urlBx}{$this->pricingEndpoint}", [
             'headers' => $headers,

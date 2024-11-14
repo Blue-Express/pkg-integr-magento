@@ -182,6 +182,14 @@ class ShippingPt extends AbstractCarrier implements CarrierInterface
 		    $pudo		= $citydest['pickup'];
         }
 
+        $subtotal = $request->getPackageValue();
+        
+        //Get tax percentage from settings
+        $taxPercentage = $this->scopeConfig->getValue(
+            'carriers/bluexpress/tax_percentage',
+            \Magento\Store\Model\ScopeInterface::SCOPE_STORE
+        );
+
         if($citydest !=''){
             /**
             * I GENERATE THE ARRAY TO PASS IT TO THE API THAT WILL LOOK FOR THE PRICE
@@ -189,11 +197,11 @@ class ShippingPt extends AbstractCarrier implements CarrierInterface
 
             if($pudo === true){
                 $familiaProducto = 'PUDO';
-                $rate = $this->getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct,$familiaProducto);
+                $rate = $this->getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct,$familiaProducto, $subtotal,$taxPercentage);
 
             }else{
                 $familiaProducto = 'PAQU';
-                $rate = $this->getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct,$familiaProducto);
+                $rate = $this->getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct,$familiaProducto, $subtotal,$taxPercentage);
             }
 
             $result->append($rate['method']);
@@ -336,7 +344,7 @@ class ShippingPt extends AbstractCarrier implements CarrierInterface
         return $cityOrigin;
     }
 
-    public function getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct, $familiaProducto)
+    public function getPriceBx($method,$countryID,$cityOrigin,$citydest,$baseUrl,$itemProduct, $familiaProducto, $subtotal,$taxPercentage)
     {
 
         $seteoDatos = [
@@ -352,14 +360,20 @@ class ShippingPt extends AbstractCarrier implements CarrierInterface
         ];
 
 	$blueservice = $this->_blueservice;
-        $costoEnvio = $blueservice->getBXCosto($seteoDatos);
+        $costoEnvio = $blueservice->getBXCosto($seteoDatos,$subtotal);
         $json = json_decode($costoEnvio,true);
         $costo = 0;
         foreach ($json as $key => $datos){
             if($key == 'data'){
                 if(is_array($datos) && !empty($datos)){
                     if($datos['total'] != '' && $datos['total'] != 0){
-                        $method->setPrice((int)$datos['total']);
+                        if($taxPercentage > 0){
+                            $taxAmount = ($datos['total'] * $taxPercentage) / 100;
+			                $totalShippingCost = $datos['total'] + $taxAmount;
+                            $method->setPrice((int)$totalShippingCost);
+                        }else{
+                            $method->setPrice((int)$datos['total']);
+                        }
                         $method->setCost((int)$datos['total']);
                         if($familiaProducto === 'PUDO'){
                             $method->setMethodTitle($citydest['pickupInfo']['agency_name']);

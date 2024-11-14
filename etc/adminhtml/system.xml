@@ -12,6 +12,10 @@
                     <label>Url Blue Express</label>
                     <validate>required-entry</validate>
                 </field>
+                <field id="tax_percentage" translate="label" type="text" sortOrder="120" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Tax Percentage</label>
+                    <validate>validate-number validate-greater-than-zero</validate>
+                </field>
             </group>
             <group id="bxexpress" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Envios Express</label>
